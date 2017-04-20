@@ -47,7 +47,9 @@ import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
 import org.apache.cxf.binding.soap.saaj.SAAJStreamWriter;
+import org.apache.cxf.helpers.DOMUtils;
 import org.apache.cxf.helpers.LoadingByteArrayOutputStream;
+import org.apache.cxf.staxutils.OverlayW3CDOMStreamWriter;
 import org.apache.cxf.staxutils.StaxUtils;
 import org.apache.xml.security.encryption.AbstractSerializer;
 import org.apache.xml.security.encryption.XMLEncryptionException;
@@ -66,7 +68,7 @@ public class StaxSerializer extends AbstractSerializer {
                 com.ctc.wstx.sr.InputElementStack ies = (com.ctc.wstx.sr.InputElementStack)nsctx;
                 com.ctc.wstx.util.InternCache ic = com.ctc.wstx.util.InternCache.getInstance();
 
-                Map<String, String> storedNamespaces = new HashMap<String, String>();
+                Map<String, String> storedNamespaces = new HashMap<>();
                 Node wk = ctx;
                 while (wk != null) {
                     NamedNodeMap atts = wk.getAttributes();
@@ -145,7 +147,7 @@ public class StaxSerializer extends AbstractSerializer {
             outputStreamWriter.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?><dummy");
 
             // Run through each node up to the document node and find any xmlns: nodes
-            Map<String, String> storedNamespaces = new HashMap<String, String>();
+            Map<String, String> storedNamespaces = new HashMap<>();
             Node wk = ctx;
             while (wk != null) {
                 NamedNodeMap atts = wk.getAttributes();
@@ -229,27 +231,18 @@ public class StaxSerializer extends AbstractSerializer {
                 while (el != null && !(el instanceof SOAPEnvelope)) {
                     el = el.getParentElement();
                 }
-                //cannot load into fragment due to a ClassCastException iwthin SAAJ addChildElement
+                //cannot load into fragment due to a ClassCastException within SAAJ addChildElement
                 //which only checks for Document as parent, not DocumentFragment
                 Element element = ctx.getOwnerDocument().createElementNS("dummy", "dummy");
                 writer = new SAAJStreamWriter((SOAPEnvelope)el, element);
-                StaxUtils.copy(reader, writer);
-
-                DocumentFragment result = contextDocument.createDocumentFragment();
-                Node child = element.getFirstChild();
-                if (wrapped) {
-                    child = child.getFirstChild();
-                }
-                if (child != null && child.getNextSibling() == null) {
-                    return child;
-                }
-                while (child != null) {
-                    Node nextChild = child.getNextSibling();
-                    result.appendChild(child);
-                    child = nextChild;
-                }
-
-                return result;
+                return appendNewChild(reader, wrapped, contextDocument, writer, element);
+            }
+            if (DOMUtils.isJava9SAAJ()) {
+                //cannot load into fragment due to a ClassCastException within SAAJ addChildElement
+                //which only checks for Document as parent, not DocumentFragment
+                Element element = ctx.getOwnerDocument().createElementNS("dummy", "dummy");
+                writer = new OverlayW3CDOMStreamWriter(ctx.getOwnerDocument(), element);
+                return appendNewChild(reader, wrapped, contextDocument, writer, element);
             }
             // Import to a dummy fragment
             DocumentFragment dummyFragment = contextDocument.createDocumentFragment();
@@ -275,6 +268,27 @@ public class StaxSerializer extends AbstractSerializer {
         } catch (XMLStreamException ex) {
             throw new XMLEncryptionException(ex);
         }
+    }
+
+    private Node appendNewChild(XMLStreamReader reader, boolean wrapped, Document contextDocument,
+                                XMLStreamWriter writer, Element element) throws XMLStreamException {
+        StaxUtils.copy(reader, writer);
+
+        DocumentFragment result = contextDocument.createDocumentFragment();
+        Node child = element.getFirstChild();
+        if (wrapped) {
+            child = child.getFirstChild();
+        }
+        if (child != null && child.getNextSibling() == null) {
+            return child;
+        }
+        while (child != null) {
+            Node nextChild = child.getNextSibling();
+            result.appendChild(child);
+            child = nextChild;
+        }
+
+        return result;
     }
 
 }

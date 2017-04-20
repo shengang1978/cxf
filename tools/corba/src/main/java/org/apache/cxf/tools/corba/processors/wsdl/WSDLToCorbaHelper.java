@@ -104,7 +104,7 @@ public class WSDLToCorbaHelper {
     SchemaCollection xmlSchemaList;
     TypeMappingType typeMappingType;
     Definition def;
-    Map<QName, CorbaType> recursionMap = new HashMap<QName, CorbaType>();
+    Map<QName, CorbaType> recursionMap = new HashMap<>();
 
     public void setTypeMap(TypeMappingType map) {
         typeMappingType = map;
@@ -1068,7 +1068,7 @@ public class WSDLToCorbaHelper {
             if (basetype == null) {
                 return null;
             }
-            // process  ext types ????
+            // process ext types ????
             MemberType basemember = new MemberType();
             basemember.setName("_simpleTypeValue");
             QName baseTypeName = checkPrefix(basetype.getQName());

@@ -100,6 +100,7 @@ import org.apache.cxf.jaxrs.model.UserOperation;
 import org.apache.cxf.jaxrs.model.UserResource;
 import org.apache.cxf.jaxrs.provider.JAXBElementProvider;
 import org.apache.cxf.message.Message;
+import org.apache.cxf.message.MessageImpl;
 import org.apache.cxf.resource.ResourceManager;
 import org.apache.cxf.staxutils.StaxUtils;
 
@@ -124,7 +125,7 @@ public final class ResourceUtils {
         SERVER_PROVIDER_CLASS_NAMES.add("javax.ws.rs.container.ContainerRequestFilter");
         SERVER_PROVIDER_CLASS_NAMES.add("javax.ws.rs.container.ContainerResponseFilter");
         SERVER_PROVIDER_CLASS_NAMES.add("javax.ws.rs.container.DynamicFeature");
-        SERVER_PROVIDER_CLASS_NAMES.add("org.apache.cxf.jaxrs.ext.ContextResolver");
+        SERVER_PROVIDER_CLASS_NAMES.add("org.apache.cxf.jaxrs.ext.ContextProvider");
 
     }
 
@@ -216,7 +217,7 @@ public final class ResourceUtils {
         Map<String, UserOperation> ops = model.getOperationsAsMap();
 
         Method defaultMethod = null;
-        Map<String, Method> methodNames = new HashMap<String, Method>();
+        Map<String, Method> methodNames = new HashMap<>();
         for (Method m : cri.getServiceClass().getMethods()) {
             if (m.getAnnotation(DefaultMethod.class) != null) {
                 // if needed we can also support multiple default methods
@@ -779,18 +780,21 @@ public final class ResourceUtils {
                                                       Message m,
                                                       boolean perRequest,
                                                       Map<Class<?>, Object> contextValues) {
+        if (m == null) {
+            m = new MessageImpl();
+        }
         Class<?>[] params = c.getParameterTypes();
         Annotation[][] anns = c.getParameterAnnotations();
         Type[] genericTypes = c.getGenericParameterTypes();
         @SuppressWarnings("unchecked")
-        MultivaluedMap<String, String> templateValues = m == null ? null
-            : (MultivaluedMap<String, String>)m.get(URITemplate.TEMPLATE_PARAMETERS);
+        MultivaluedMap<String, String> templateValues = 
+            (MultivaluedMap<String, String>)m.get(URITemplate.TEMPLATE_PARAMETERS);
         Object[] values = new Object[params.length];
         for (int i = 0; i < params.length; i++) {
             if (AnnotationUtils.getAnnotation(anns[i], Context.class) != null) {
                 Object contextValue = contextValues != null ? contextValues.get(params[i]) : null;
                 if (contextValue == null) {
-                    if (perRequest) {
+                    if (perRequest || InjectionUtils.VALUE_CONTEXTS.contains(params[i].getName())) {
                         values[i] = JAXRSUtils.createContextValue(m, genericTypes[i], params[i]);
                     } else {
                         values[i] = InjectionUtils.createThreadLocalProxy(params[i]);
@@ -808,18 +812,13 @@ public final class ResourceUtils {
         }
         return values;
     }
-    public static JAXRSServerFactoryBean createApplication(Application app, boolean ignoreAppPath) {
-        return createApplication(app, ignoreAppPath, false);
-    }
-
-    public static JAXRSServerFactoryBean createApplication(Application app, boolean ignoreAppPath,
-            boolean staticSubresourceResolution) {
-        return createApplication(app, ignoreAppPath, staticSubresourceResolution, null);
-    }
-
+    
     @SuppressWarnings("unchecked")
-    public static JAXRSServerFactoryBean createApplication(Application app, boolean ignoreAppPath,
-            boolean staticSubresourceResolution, Bus bus) {
+    public static JAXRSServerFactoryBean createApplication(Application app, 
+                                                           boolean ignoreAppPath,
+                                                           boolean staticSubresourceResolution, 
+                                                           boolean useSingletonResourceProvider,
+                                                           Bus bus) {
 
         Set<Object> singletons = app.getSingletons();
         verifySingletons(singletons);
@@ -827,7 +826,7 @@ public final class ResourceUtils {
         List<Class<?>> resourceClasses = new ArrayList<Class<?>>();
         List<Object> providers = new ArrayList<>();
         List<Feature> features = new ArrayList<>();
-        Map<Class<?>, ResourceProvider> map = new HashMap<Class<?>, ResourceProvider>();
+        Map<Class<?>, ResourceProvider> map = new HashMap<>();
 
         // Note, app.getClasses() returns a list of per-request classes
         // or singleton provider classes
@@ -839,7 +838,11 @@ public final class ResourceUtils {
                     features.add(createFeatureInstance((Class<? extends Feature>) cls));
                 } else {
                     resourceClasses.add(cls);
-                    map.put(cls, new PerRequestResourceProvider(cls));
+                    if (useSingletonResourceProvider) {
+                        map.put(cls, new SingletonResourceProvider(createProviderInstance(cls)));
+                    } else {
+                        map.put(cls, new PerRequestResourceProvider(cls));
+                    }
                 }
             }
         }

@@ -53,6 +53,7 @@ import org.apache.cxf.Bus;
 import org.apache.cxf.BusFactory;
 import org.apache.cxf.common.util.PropertyUtils;
 import org.apache.cxf.ext.logging.LoggingInInterceptor;
+import org.apache.cxf.ext.logging.LoggingOutInterceptor;
 import org.apache.cxf.helpers.CastUtils;
 import org.apache.cxf.interceptor.Fault;
 import org.apache.cxf.interceptor.Interceptor;
@@ -112,7 +113,7 @@ public class BookServer extends AbstractBusTestServerBase {
         providers.add(new StreamingResponseProvider<Object>());
         providers.add(new ContentTypeModifyingMBW());
         JAXBElementProvider<?> jaxbProvider = new JAXBElementProvider<Object>();
-        Map<String, String> jaxbElementClassMap = new HashMap<String, String>();
+        Map<String, String> jaxbElementClassMap = new HashMap<>();
         jaxbElementClassMap.put(BookNoXmlRootElement.class.getName(), "BookNoXmlRootElement");
         jaxbProvider.setJaxbElementClassMap(jaxbElementClassMap);
         providers.add(jaxbProvider);
@@ -129,10 +130,10 @@ public class BookServer extends AbstractBusTestServerBase {
         List<Interceptor<? extends Message>> inInts = new ArrayList<Interceptor<? extends Message>>();
         inInts.add(new CustomInFaultyInterceptor());
         inInts.add(new LoggingInInterceptor());
-
         sf.setInInterceptors(inInts);
         List<Interceptor<? extends Message>> outInts = new ArrayList<Interceptor<? extends Message>>();
         outInts.add(new CustomOutInterceptor());
+        outInts.add(new LoggingOutInterceptor());
         sf.setOutInterceptors(outInts);
         List<Interceptor<? extends Message>> outFaultInts = new ArrayList<Interceptor<? extends Message>>();
         outFaultInts.add(new CustomOutFaultInterceptor());

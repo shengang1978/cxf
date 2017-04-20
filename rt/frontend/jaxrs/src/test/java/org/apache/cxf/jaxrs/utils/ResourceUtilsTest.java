@@ -73,7 +73,7 @@ public class ResourceUtilsTest extends Assert {
         op.setParameters(Collections.singletonList(new Parameter(ParameterType.PATH, "id")));
         ur.setOperations(Collections.singletonList(op));
 
-        Map<String, UserResource> resources = new HashMap<String, UserResource>();
+        Map<String, UserResource> resources = new HashMap<>();
         resources.put(ur.getName(), ur);
         ClassResourceInfo cri =
             ResourceUtils.createClassResourceInfo(resources, ur, null, true, true, BusFactory.getDefaultBus());
@@ -164,13 +164,15 @@ public class ResourceUtilsTest extends Assert {
 
     @Test
     public void shouldCreateApplicationWhichInheritsApplicationPath() throws Exception {
-        JAXRSServerFactoryBean application = ResourceUtils.createApplication(new SuperApplication(), false);
+        JAXRSServerFactoryBean application = ResourceUtils.createApplication(
+                                                 new SuperApplication(), false, false, false, null);
         assertEquals("/base", application.getAddress());
     }
 
     @Test
     public void shouldCreateApplicationWhichOverridesApplicationPath() throws Exception {
-        JAXRSServerFactoryBean application = ResourceUtils.createApplication(new CustomApplication(), false);
+        JAXRSServerFactoryBean application = ResourceUtils.createApplication(
+                                                 new CustomApplication(), false, false, false, null);
         assertEquals("/custom", application.getAddress());
     }
 

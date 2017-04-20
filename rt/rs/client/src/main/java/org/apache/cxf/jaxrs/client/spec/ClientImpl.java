@@ -462,19 +462,12 @@ public class ClientImpl implements Client {
         }
 
         private WebTarget newWebTarget(UriBuilder newBuilder) {
-            boolean complete = false;
+            WebClient newClient;
             if (targetClient != null) {
-                try {
-                    newBuilder.build();
-                    complete = true;
-                } catch (IllegalArgumentException ex) {
-                    //the builder still has unresolved vars
-                }
+                newClient = WebClient.fromClient(targetClient);
+            } else {
+                newClient = null;
             }
-            if (!complete) {
-                return new WebTargetImpl(newBuilder, getConfiguration());
-            }
-            WebClient newClient = WebClient.fromClient(targetClient);
             return new WebTargetImpl(newBuilder, getConfiguration(), newClient);
         }
 
@@ -552,7 +545,9 @@ public class ClientImpl implements Client {
         }
     }
     private static Long getLongValue(Object o) {
-        return o instanceof Long ? (Long)o : o instanceof String ? Long.valueOf(o.toString()) : null;
+        return o instanceof Long ? (Long)o 
+            : o instanceof String ? Long.valueOf(o.toString()) 
+            : o instanceof Integer ? ((Integer)o).longValue() : null;
     }
     private static Integer getIntValue(Object o) {
         return o instanceof Integer ? (Integer)o : o instanceof String ? Integer.valueOf(o.toString()) : null;

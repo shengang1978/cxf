@@ -69,15 +69,8 @@
         <dependency>
             <groupId>org.springframework.ldap</groupId>
             <artifactId>spring-ldap-core</artifactId>
-            <version>${cxf.spring.ldap.version}</version>
             <scope>provided</scope>
             <optional>true</optional>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-logging</groupId>
-                    <artifactId>commons-logging</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.hazelcast</groupId>
@@ -123,21 +116,18 @@
         <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
-            <version>${cxf.log4j.version}</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>${cxf.logback.classic.version}</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-jexl</artifactId>
-            <version>${cxf.jexl.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
@@ -164,11 +154,11 @@
                         <Specification-Title>${project.name}</Specification-Title>
                         <Specification-Vendor>The Apache Software Foundation</Specification-Vendor>
                         <Export-Package>
-                            org.apache.cxf.sts.*;version=${project.version}
+                            org.apache.cxf.sts.*;version=${cxf.osgi.version.clean}
                         </Export-Package>
                         <Import-Package>
                             javax.servlet*;version="${cxf.osgi.javax.servlet.version}",
-                            org.apache.cxf.sts.provider.*;version=${project.version},
+                            org.apache.cxf.sts.provider.*;version=${cxf.osgi.version.clean},
                             !org.apache.cxf.sts.*,
                             org.apache.cxf.*,
                             javax.xml.ws*;version="[0.0,3)",

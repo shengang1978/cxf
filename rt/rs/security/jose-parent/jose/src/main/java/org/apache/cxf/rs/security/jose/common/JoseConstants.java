@@ -138,12 +138,6 @@ public final class JoseConstants {
     public static final String RSSEC_EC_CURVE = "rs.security.elliptic.curve";
 
     /**
-     * The OLD signature algorithm identifier. Use RSSEC_SIGNATURE_ALGORITHM instead.
-     */
-    @Deprecated
-    public static final String DEPR_RSSEC_SIGNATURE_ALGORITHM = "rs.security.jws.content.signature.algorithm";
-
-    /**
      * The signature properties file for compact signature creation. If not specified then it falls back to
      * RSSEC_SIGNATURE_PROPS.
      */
@@ -179,6 +173,11 @@ public final class JoseConstants {
      * Include the X.509 certificate SHA-1 digest for signature in the "x5t" header.
      */
     public static final String RSSEC_SIGNATURE_INCLUDE_CERT_SHA1 = "rs.security.signature.include.cert.sha1";
+    
+    /**
+     * Include the X.509 certificate SHA-256 digest for signature in the "x5t#S256" header.
+     */
+    public static final String RSSEC_SIGNATURE_INCLUDE_CERT_SHA256 = "rs.security.signature.include.cert.sha256";
 
     //
     // JWE specific Configuration
@@ -196,34 +195,15 @@ public final class JoseConstants {
     public static final String RSSEC_ENCRYPTION_CONTENT_ALGORITHM = "rs.security.encryption.content.algorithm";
 
     /**
-     * The OLD encryption content algorithm to use. Use RSSEC_ENCRYPTION_CONTENT_ALGORITHM instead.
-     */
-    @Deprecated
-    public static final String DEPR_RSSEC_ENCRYPTION_CONTENT_ALGORITHM =
-        "rs.security.jwe.content.encryption.algorithm";
-
-    /**
      * The encryption key algorithm to use. The default algorithm if not specified is 'RSA-OAEP' if the key is an
      * RSA key, and 'A128GCMKW' if it is an octet sequence.
      */
     public static final String RSSEC_ENCRYPTION_KEY_ALGORITHM = "rs.security.encryption.key.algorithm";
 
     /**
-     * The OLD encryption key algorithm to use. Use RSSEC_ENCRYPTION_KEY_ALGORITHM instead.
-     */
-    @Deprecated
-    public static final String DEPR_RSSEC_ENCRYPTION_KEY_ALGORITHM = "rs.security.jwe.key.encryption.algorithm";
-
-    /**
      * The encryption zip algorithm to use.
      */
     public static final String RSSEC_ENCRYPTION_ZIP_ALGORITHM = "rs.security.encryption.zip.algorithm";
-
-    /**
-     * The OLD encryption zip algorithm to use. Use RSSEC_ENCRYPTION_ZIP_ALGORITHM instead.
-     */
-    @Deprecated
-    public static final String DEPR_RSSEC_ENCRYPTION_ZIP_ALGORITHM = "rs.security.jwe.zip.algorithm";
 
     /**
      * The encryption properties file for encryption creation. If not specified then it falls back to
@@ -261,6 +241,11 @@ public final class JoseConstants {
      * Include the X.509 certificate SHA-1 digest for encryption in the "x5t" header.
      */
     public static final String RSSEC_ENCRYPTION_INCLUDE_CERT_SHA1 = "rs.security.encryption.include.cert.sha1";
+    
+    /**
+     * Include the X.509 certificate SHA-256 digest for encryption in the "x5t#S256" header.
+     */
+    public static final String RSSEC_ENCRYPTION_INCLUDE_CERT_SHA256 = "rs.security.encryption.include.cert.sha256";
 
     //
     // JWT specific configuration

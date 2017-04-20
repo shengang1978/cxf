@@ -44,6 +44,7 @@ public final class OAuthConstants {
     public static final String RESPONSE_MODE = "response_mode";
     public static final String FORM_RESPONSE_MODE = "form_post";
     // CXF-Specific
+    public static final String TOKEN_REQUEST_PARAMS = "token_request_params";
     public static final String ACCESS_TOKEN_ISSUED_AT = "issued_at";
 
 
@@ -142,7 +143,8 @@ public final class OAuthConstants {
     public static final String CLIENT_SECRET_CONTENT_ENCRYPTION_ALGORITHM =
         "client.secret.content.encryption.algorithm";
 
-    // Client Secret Encrypting Algorithm
+    public static final String TLS_CLIENT_AUTH_SUBJECT_DN = "tls_client_auth_subject_dn";
+    public static final String TLS_CLIENT_AUTH_ISSUER_DN = "tls_client_auth_issuer_dn";
     private OAuthConstants() {
     }
 

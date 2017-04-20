@@ -31,6 +31,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.cxf.Bus;
 import org.apache.cxf.common.logging.LogUtils;
+import org.apache.cxf.message.Message;
 import org.apache.cxf.service.model.EndpointInfo;
 import org.apache.cxf.transport.http.DestinationRegistry;
 import org.apache.cxf.transport.servlet.ServletDestination;
@@ -43,7 +44,7 @@ import org.atmosphere.cpr.AtmosphereResponseImpl;
 import org.atmosphere.handler.AbstractReflectorAtmosphereHandler;
 
 /**
- *
+ * WebSocket Servlet Destination based on Atmosphere
  */
 public class AtmosphereWebSocketServletDestination extends ServletDestination implements
     WebSocketDestinationService {
@@ -54,19 +55,50 @@ public class AtmosphereWebSocketServletDestination extends ServletDestination im
     public AtmosphereWebSocketServletDestination(Bus bus, DestinationRegistry registry, EndpointInfo ei,
                                                  String path) throws IOException {
         super(bus, registry, ei, path);
-        framework = new AtmosphereFramework(false, true);
-        framework.setUseNativeImplementation(false);
-        framework.addInitParameter(ApplicationConfig.PROPERTY_NATIVE_COMETSUPPORT, "true");
-        framework.addInitParameter(ApplicationConfig.PROPERTY_SESSION_SUPPORT, "true");
-        framework.addInitParameter(ApplicationConfig.WEBSOCKET_SUPPORT, "true");
-        framework.addInitParameter(ApplicationConfig.WEBSOCKET_PROTOCOL_EXECUTION, "true");
+        framework = create(bus);
+    }
+
+    private AtmosphereFramework create(Bus bus) {
+        final AtmosphereFramework instance = new AtmosphereFramework(false, true);
+        
+        instance.setUseNativeImplementation(false);
+        instance.addInitParameter(ApplicationConfig.PROPERTY_NATIVE_COMETSUPPORT, "true");
+        instance.addInitParameter(ApplicationConfig.PROPERTY_SESSION_SUPPORT, "true");
+        instance.addInitParameter(ApplicationConfig.WEBSOCKET_SUPPORT, "true");
+        instance.addInitParameter(ApplicationConfig.WEBSOCKET_PROTOCOL_EXECUTION, "true");
         // workaround for atmosphere's jsr356 initialization requiring servletConfig
-        framework.addInitParameter(ApplicationConfig.WEBSOCKET_SUPPRESS_JSR356, "true");
-        AtmosphereUtils.addInterceptors(framework, bus);
-        framework.addAtmosphereHandler("/", new DestinationHandler());
+        instance.addInitParameter(ApplicationConfig.WEBSOCKET_SUPPRESS_JSR356, "true");
+        AtmosphereUtils.addInterceptors(instance, bus);
+        instance.addAtmosphereHandler("/", new DestinationHandler());
+        
+        return instance;
+    }
+    
+    @Override
+    public void finalizeConfig() {
         framework.init();
     }
 
+    @Override
+    public void onServletConfigAvailable(ServletConfig config) throws ServletException {
+        // Very likely there is JSR-356 implementation available, let us reconfigure the Atmosphere framework
+        // to use it since ServletConfig instance is already available.
+        final Object container = config.getServletContext()
+            .getAttribute("javax.websocket.server.ServerContainer");
+
+        if (container != null) {
+            if (framework.initialized()) {
+                framework.destroy();
+            }
+            
+            framework = create(getBus());
+            framework.addInitParameter(ApplicationConfig.PROPERTY_NATIVE_COMETSUPPORT, "false");
+            framework.addInitParameter(ApplicationConfig.WEBSOCKET_SUPPRESS_JSR356, "false");
+            
+            framework.init(config);
+        }
+    }
+    
     @Override
     public void invoke(ServletConfig config, ServletContext context, HttpServletRequest req,
                        HttpServletResponse resp) throws IOException {
@@ -86,6 +118,27 @@ public class AtmosphereWebSocketServletDestination extends ServletDestination im
     public void invokeInternal(ServletConfig config, ServletContext context, HttpServletRequest req,
                                HttpServletResponse resp) throws IOException {
         super.invoke(config, context, req, resp);
+    }
+    
+    @Override
+    protected void setupMessage(Message inMessage, ServletConfig config, ServletContext context, 
+            HttpServletRequest req, HttpServletResponse resp) throws IOException {
+
+        super.setupMessage(inMessage, config, context, req, resp);
+        
+        // There are some complications with detecting a full request URL in JSR-356 spec, so
+        // every WS Container has different interpretation.
+        // 
+        //   https://bz.apache.org/bugzilla/show_bug.cgi?id=56573
+        //   https://java.net/jira/browse/WEBSOCKET_SPEC-228
+        //
+        // We have do manually inject the transport endpoint address, otherwise the
+        // JAX-RS resources won't be found.
+        final Object address = req.getAttribute("org.apache.cxf.transport.endpoint.address");
+        if (address == null) {
+            String basePath = (String)inMessage.get(Message.BASE_PATH);
+            req.setAttribute("org.apache.cxf.transport.endpoint.address", basePath);
+        }
     }
 
     @Override

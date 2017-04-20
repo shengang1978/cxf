@@ -37,7 +37,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 public class IDLToWSDLPlugin extends AbstractMojo {
 
     /**
-     * @parameter  expression="${project.build.directory}/generated/src/main/java"
+     * @parameter expression="${project.build.directory}/generated/src/main/java"
      * @required
      */
     String outputDir;
@@ -49,6 +49,7 @@ public class IDLToWSDLPlugin extends AbstractMojo {
 
 
     public void execute() throws MojoExecutionException {
+        System.setProperty("org.apache.cxf.JDKBugHacks.defaultUsesCaches", "true");
         File outputDirFile = new File(outputDir);
         outputDirFile.mkdirs();
 

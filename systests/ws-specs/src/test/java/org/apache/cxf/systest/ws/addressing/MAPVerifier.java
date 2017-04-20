@@ -46,7 +46,7 @@ public class MAPVerifier extends AbstractPhaseInterceptor<Message> {
 
     public MAPVerifier() {
         super(Phase.POST_LOGICAL);
-        mapProperties = new HashMap<String, Object>();
+        mapProperties = new HashMap<>();
         mapProperties.put(MAPTest.INBOUND_KEY, ADDRESSING_PROPERTIES_INBOUND);
         mapProperties.put(MAPTest.OUTBOUND_KEY, ADDRESSING_PROPERTIES_OUTBOUND);
     }
@@ -94,7 +94,7 @@ public class MAPVerifier extends AbstractPhaseInterceptor<Message> {
 
     private String getExpectedExposeAs(boolean remove) {
         int size = expectedExposedAs.size();
-        return  size == 0
+        return size == 0
                 ? null
                 : remove
                   ? expectedExposedAs.remove(size - 1)

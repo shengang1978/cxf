@@ -30,11 +30,14 @@ import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.PKIXBuilderParameters;
+import java.security.cert.X509CertSelector;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.net.ssl.CertPathTrustManagerParameters;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManager;
@@ -95,31 +98,50 @@ public final class TLSParameterJaxBUtils {
         }
         return secureRandom;
     }
+
+    public static KeyStore getKeyStore(KeyStoreType kst) throws GeneralSecurityException, IOException {
+        return getKeyStore(kst, false);
+    }
+
     /**
      * This method converts a JAXB generated KeyStoreType into a KeyStore.
      */
-    public static KeyStore getKeyStore(KeyStoreType kst)
+    public static KeyStore getKeyStore(KeyStoreType kst, boolean trustStore)
         throws GeneralSecurityException,
                IOException {
 
         if (kst == null) {
             return null;
         }
-        String type = SSLUtils.getKeystoreType(kst.isSetType()
+        String type = null;
+        if (trustStore) {
+            type = SSLUtils.getTrustStoreType(kst.isSetType()
+                                     ? kst.getType() : null, LOG, KeyStore.getDefaultType());
+        } else {
+            type = SSLUtils.getKeystoreType(kst.isSetType()
                                  ? kst.getType() : null, LOG, KeyStore.getDefaultType());
+        }
 
         char[] password = kst.isSetPassword()
                     ? deobfuscate(kst.getPassword())
                     : null;
         if (password == null) {
-            String tmp = SSLUtils.getKeystorePassword(null, LOG);
+            String tmp = null;
+            if (trustStore) {
+                tmp = SSLUtils.getTruststorePassword(null, LOG);
+            } else {
+                tmp = SSLUtils.getKeystorePassword(null, LOG);
+            }
             if (tmp != null) {
                 password = tmp.toCharArray();
             }
         }
-        String provider = SSLUtils.getKeystoreProvider(kst.isSetProvider()
-                                                       ? kst.getProvider() : null,
-                                                       LOG);
+        String provider = null;
+        if (trustStore) {
+            provider = SSLUtils.getTruststoreProvider(kst.isSetProvider() ? kst.getProvider() : null, LOG);
+        } else {
+            provider = SSLUtils.getKeystoreProvider(kst.isSetProvider() ? kst.getProvider() : null, LOG);
+        }
         KeyStore keyStore = provider == null
                     ? KeyStore.getInstance(type)
                     : KeyStore.getInstance(type, provider);
@@ -256,7 +278,7 @@ public final class TLSParameterJaxBUtils {
         throws GeneralSecurityException,
                IOException {
 
-        KeyStore keyStore = getKeyStore(kmc.getKeyStore());
+        KeyStore keyStore = getKeyStore(kmc.getKeyStore(), false);
 
         String alg = kmc.isSetFactoryAlgorithm()
                      ? kmc.getFactoryAlgorithm()
@@ -307,16 +329,23 @@ public final class TLSParameterJaxBUtils {
     }
 
     /**
-     * This method converts the JAXB KeyManagersType into a list of
+     * This method converts the JAXB TrustManagersType into a list of
      * JSSE TrustManagers.
      */
+    @Deprecated
     public static TrustManager[] getTrustManagers(TrustManagersType tmc)
+        throws GeneralSecurityException,
+               IOException {
+        return getTrustManagers(tmc, false);
+    }
+
+    public static TrustManager[] getTrustManagers(TrustManagersType tmc, boolean enableRevocation)
         throws GeneralSecurityException,
                IOException {
 
         final KeyStore keyStore =
             tmc.isSetKeyStore()
-                ? getKeyStore(tmc.getKeyStore())
+                ? getKeyStore(tmc.getKeyStore(), true)
                 : (tmc.isSetCertStore()
                     ? getKeyStore(tmc.getCertStore())
                     : (KeyStore) null);
@@ -330,7 +359,14 @@ public final class TLSParameterJaxBUtils {
                      ? TrustManagerFactory.getInstance(alg, tmc.getProvider())
                      : TrustManagerFactory.getInstance(alg);
 
-        fac.init(keyStore);
+        if (enableRevocation) {
+            PKIXBuilderParameters param = new PKIXBuilderParameters(keyStore, new X509CertSelector());
+            param.setRevocationEnabled(true);
+
+            fac.init(new CertPathTrustManagerParameters(param));
+        } else {
+            fac.init(keyStore);
+        }
 
         return fac.getTrustManagers();
     }

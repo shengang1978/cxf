@@ -44,6 +44,7 @@ import org.apache.cxf.jaxrs.ext.ResourceComparator;
 import org.apache.cxf.jaxrs.impl.RequestPreprocessor;
 import org.apache.cxf.jaxrs.lifecycle.PerRequestResourceProvider;
 import org.apache.cxf.jaxrs.lifecycle.ResourceProvider;
+import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.apache.cxf.jaxrs.model.ApplicationInfo;
 import org.apache.cxf.jaxrs.model.ClassResourceInfo;
 import org.apache.cxf.jaxrs.provider.ServerProviderFactory;
@@ -74,7 +75,7 @@ import org.apache.cxf.service.invoker.Invoker;
  */
 public class JAXRSServerFactoryBean extends AbstractJAXRSFactoryBean {
 
-    protected Map<Class<?>, ResourceProvider> resourceProviders = new HashMap<Class<?>, ResourceProvider>();
+    protected Map<Class<?>, ResourceProvider> resourceProviders = new HashMap<>();
 
     private Server server;
     private boolean start = true;
@@ -159,7 +160,6 @@ public class JAXRSServerFactoryBean extends AbstractJAXRSFactoryBean {
             checkResources(true);
             if (serviceFactory.getService() == null) {
                 serviceFactory.create();
-                updateClassResourceProviders();
             }
 
             Endpoint ep = createEndpoint();
@@ -180,6 +180,7 @@ public class JAXRSServerFactoryBean extends AbstractJAXRSFactoryBean {
             }
 
             ServerProviderFactory factory = setupFactory(ep);
+            
             ep.put(Application.class.getName(), appProvider);
             factory.setRequestPreprocessor(
                 new RequestPreprocessor(languageMappings, extensionMappings));
@@ -192,10 +193,14 @@ public class JAXRSServerFactoryBean extends AbstractJAXRSFactoryBean {
             }
             checkPrivateEndpoint(ep);
 
-            factory.applyDynamicFeatures(getServiceFactory().getClassResourceInfo());
             applyBusFeatures(getBus());
             applyFeatures();
 
+            updateClassResourceProviders(ep);
+            injectContexts(factory);
+            factory.applyDynamicFeatures(getServiceFactory().getClassResourceInfo());
+            
+            
             getServiceFactory().sendEvent(FactoryBeanListener.Event.SERVER_CREATED,
                                           server,
                                           null,
@@ -407,35 +412,36 @@ public class JAXRSServerFactoryBean extends AbstractJAXRSFactoryBean {
         this.start = start;
     }
 
-    protected void injectContexts() {
+    protected void injectContexts(ServerProviderFactory factory) {
         Application application = appProvider == null ? null : appProvider.getProvider();
         for (ClassResourceInfo cri : serviceFactory.getClassResourceInfo()) {
             if (cri.isSingleton()) {
                 InjectionUtils.injectContextProxiesAndApplication(cri,
                                                     cri.getResourceProvider().getInstance(null),
-                                                    application);
+                                                    application,
+                                                    factory);
             }
         }
         if (application != null) {
             InjectionUtils.injectContextProxiesAndApplication(appProvider,
-                                                              application, null);
+                                                              application, null, null);
         }
     }
 
-    protected void updateClassResourceProviders() {
+    protected void updateClassResourceProviders(Endpoint ep) {
         for (ClassResourceInfo cri : serviceFactory.getClassResourceInfo()) {
-            if (cri.getResourceProvider() != null) {
-                continue;
+            if (cri.getResourceProvider() == null) {
+                ResourceProvider rp = resourceProviders.get(cri.getResourceClass());
+                if (rp != null) {
+                    cri.setResourceProvider(rp);
+                } else {
+                    setDefaultResourceProvider(cri);
+                }
             }
-
-            ResourceProvider rp = resourceProviders.get(cri.getResourceClass());
-            if (rp != null) {
-                cri.setResourceProvider(rp);
-            } else {
-                setDefaultResourceProvider(cri);
+            if (cri.getResourceProvider() instanceof SingletonResourceProvider) {
+                ((SingletonResourceProvider)cri.getResourceProvider()).init(ep);
             }
         }
-        injectContexts();
     }
 
     protected void setDefaultResourceProvider(ClassResourceInfo cri) {

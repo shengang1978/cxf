@@ -37,11 +37,11 @@ public class ExtensionManagerTest extends Assert {
     private Map<Class<?>, Object> extensions;
 
     @Before
-    public  void setUp() {
+    public void setUp() {
         ResourceResolver resolver = new SinglePropertyResolver(EXTENSIONMANAGER_TEST_RESOURECE_NAME, this);
         ResourceManager rm = new DefaultResourceManager(resolver);
 
-        extensions = new HashMap<Class<?>, Object>();
+        extensions = new HashMap<>();
         extensions.put(Integer.class, Integer.valueOf(0));
 
         manager = new ExtensionManagerImpl("test-extension.xml",

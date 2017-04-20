@@ -260,7 +260,7 @@ public class CorbaConduit implements Conduit {
             retVal.getObject().setIntoAny(returnAny, retVal, false);
             ret = orb.create_named_value(retVal.getName(), returnAny, org.omg.CORBA.ARG_OUT.value);
         } else {
-            // TODO: REVISIT: for some reason,some ORBs do not like to
+            // TODO: REVISIT: for some reason, some ORBs do not like to
             // have a null NamedValue return value. Create this 'empty'
             // one if a void return type is used.
             ret = orb.create_named_value("return", orb.create_any(), org.omg.CORBA.ARG_OUT.value);
@@ -323,7 +323,7 @@ public class CorbaConduit implements Conduit {
         if (orb == null) {
             prepareOrb();
         }
-        Map<TypeCode, RaisesType> exceptions = new HashMap<TypeCode, RaisesType>();
+        Map<TypeCode, RaisesType> exceptions = new HashMap<>();
         List<RaisesType> exList = operation.getRaises();
         if (exList != null) {
             for (int i = 0; i < exList.size(); ++i) {

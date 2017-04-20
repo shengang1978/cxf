@@ -76,7 +76,7 @@ public class Soap12FaultInInterceptor extends AbstractSoapInterceptor {
         Element detail = null;
         String lang = null;
 
-        Map<String, String> ns = new HashMap<String, String>();
+        Map<String, String> ns = new HashMap<>();
         ns.put("s", Soap12.SOAP_NAMESPACE);
         XPathUtils xu = new XPathUtils(ns);
         try {
@@ -100,13 +100,14 @@ public class Soap12FaultInInterceptor extends AbstractSoapInterceptor {
             } else {
                 fault = StaxUtils.read(new FragmentStreamReader(reader));
             }
+            fault = DOMUtils.getDomElement(fault);
             Element el = (Element)xu.getValue("//s:Fault/s:Code/s:Value",
                                       fault,
                                       XPathConstants.NODE);
             if (el != null) {
                 faultCode = DOMUtils.createQName(el.getTextContent(), el);
             }
-
+            
             el = (Element)xu.getValue("//s:Fault/s:Code/s:Subcode",
                                       fault,
                                       XPathConstants.NODE);

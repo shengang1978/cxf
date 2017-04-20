@@ -458,7 +458,7 @@ public class BookServer20 extends AbstractBusTestServerBase {
             WebApplicationException {
             if (ri.getResourceClass() == BookStore.class) {
                 String serverRead = context.getHeaders().getFirst("ServerReaderInterceptor");
-                if (serverRead == null || !serverRead.equals("serverRead")) {
+                if (serverRead == null || !"serverRead".equals(serverRead)) {
                     throw new RuntimeException();
                 }
                 if (ui.getPath().endsWith("/async")) {
@@ -500,7 +500,7 @@ public class BookServer20 extends AbstractBusTestServerBase {
 
             configurable.register(new PreMatchDynamicContainerRequestFilter());
             configurable.register(RESPONSE_FILTER);
-            Map<Class<?>, Integer> contracts = new HashMap<Class<?>, Integer>();
+            Map<Class<?>, Integer> contracts = new HashMap<>();
             contracts.put(ContainerResponseFilter.class, 2);
             configurable.register(new PostMatchDynamicContainerRequestResponseFilter(),
                                   contracts);

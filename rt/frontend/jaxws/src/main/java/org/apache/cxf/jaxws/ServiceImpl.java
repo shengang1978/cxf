@@ -116,7 +116,7 @@ public class ServiceImpl extends ServiceDelegate {
     private QName serviceName;
     private Class<?> clazz;
 
-    private Map<QName, PortInfoImpl> portInfos = new HashMap<QName, PortInfoImpl>();
+    private Map<QName, PortInfoImpl> portInfos = new HashMap<>();
     private WebServiceFeature serviceFeatures[];
 
     public ServiceImpl(Bus b, URL url, QName name, Class<?> cls, WebServiceFeature ... f) {
@@ -130,7 +130,7 @@ public class ServiceImpl extends ServiceDelegate {
         }
     }
 
-    void initialize(Bus b, URL url, WebServiceFeature ... f) {
+    final void initialize(Bus b, URL url, WebServiceFeature ... f) {
         if (b == null) {
             b = BusFactory.getThreadDefaultBus(true);
         }

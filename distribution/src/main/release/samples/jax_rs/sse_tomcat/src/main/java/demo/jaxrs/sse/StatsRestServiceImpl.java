@@ -18,7 +18,6 @@
  */
 package demo.jaxrs.sse;
 
-import java.io.IOException;
 import java.util.Date;
 import java.util.Random;
 
@@ -33,12 +32,15 @@ import javax.ws.rs.sse.OutboundSseEvent.Builder;
 import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
 
-import org.apache.cxf.jaxrs.sse.SseImpl;
-
 @Path("/stats")
 public class StatsRestServiceImpl {
     private static final Random RANDOM = new Random();
-    private final Sse sse = SseImpl.create();
+    private Sse sse;
+
+    @Context 
+    public void setSse(Sse sse) {
+        this.sse = sse;
+    }
 
     @GET
     @Path("sse/{id}")
@@ -64,7 +66,7 @@ public class StatsRestServiceImpl {
                     Thread.sleep(1000);
                     sink.onNext(createStatsEvent(builder.name("stats"), 8));
                     sink.close();
-                } catch (final InterruptedException | IOException e) {
+                } catch (final Exception e) {
                     e.printStackTrace();
                 }
             }

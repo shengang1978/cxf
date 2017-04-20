@@ -19,10 +19,9 @@
 
 package org.apache.cxf.ext.logging.event;
 
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.time.Instant;
-
-import javax.xml.namespace.QName;
 
 /**
  *
@@ -33,45 +32,18 @@ public class PrintWriterEventSender implements LogEventSender {
     public PrintWriterEventSender(PrintWriter writer) {
         this.writer = writer;
     }
-
-    void setPrintWriter(PrintWriter w) {
-        writer = w;
+    public PrintWriterEventSender(PrintStream ps) {
+        this.writer = new PrintWriter(ps);
     }
-
 
     /** {@inheritDoc}*/
     @Override
     public void send(LogEvent event) {
-        StringBuilder b = new StringBuilder();
-
-        b.append(Instant.now().toString()).append(" - PrintWriterEventSender\n");
-        put(b, "type", event.getType().toString());
-        put(b, "address", event.getAddress());
-        put(b, "content-type", event.getContentType());
-        put(b, "encoding", event.getEncoding());
-        put(b, "exchangeId", event.getExchangeId());
-        put(b, "httpMethod", event.getHttpMethod());
-        put(b, "messageId", event.getMessageId());
-        put(b, "responseCode", event.getResponseCode());
-        put(b, "serviceName", localPart(event.getServiceName()));
-        put(b, "portName", localPart(event.getPortName()));
-        put(b, "portTypeName", localPart(event.getPortTypeName()));
-        if (event.getFullContentFile() != null) {
-            put(b, "fullContentFile", event.getFullContentFile().getAbsolutePath());
-        }
-        put(b, "headers", event.getHeaders().toString());
         synchronized (writer) {
-            writer.print(b.toString());
-            writer.println(event.getPayload());
+            writer.print(Instant.now().toString() + " - PrintWriterEventSender - ");
+            writer.print(LogMessageFormatter.format(event));
+            writer.flush();
         }
     }
-    protected String localPart(QName name) {
-        return name == null ? null : name.getLocalPart();
-    }
-
-    protected void put(StringBuilder b, String key, String value) {
-        if (value != null) {
-            b.append("    ").append(key).append(": ").append(value).append("\n");
-        }
-    }
+    
 }

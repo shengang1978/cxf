@@ -43,7 +43,7 @@ import org.apache.cxf.jaxrs.utils.ResourceUtils;
 
 public class RuntimeDelegateImpl extends RuntimeDelegate {
     protected Map<Class<?>, HeaderDelegate<?>> headerProviders
-        = new HashMap<Class<?>, HeaderDelegate<?>>();
+        = new HashMap<>();
 
     public RuntimeDelegateImpl() {
         headerProviders.put(MediaType.class, new MediaTypeHeaderProvider());
@@ -110,7 +110,7 @@ public class RuntimeDelegateImpl extends RuntimeDelegate {
             && !JAXRSServerFactoryBean.class.isAssignableFrom(endpointType))) {
             throw new IllegalArgumentException();
         }
-        JAXRSServerFactoryBean bean = ResourceUtils.createApplication(app, false);
+        JAXRSServerFactoryBean bean = ResourceUtils.createApplication(app, false, false, false, null);
         if (JAXRSServerFactoryBean.class.isAssignableFrom(endpointType)) {
             return endpointType.cast(bean);
         }

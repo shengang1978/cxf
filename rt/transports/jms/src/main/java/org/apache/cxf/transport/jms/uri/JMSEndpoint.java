@@ -54,8 +54,8 @@ public class JMSEndpoint {
 
     public static final String JAXWS_PROPERTY_PREFIX = "jms.";
 
-    private Map<String, String> jndiParameters = new HashMap<String, String>();
-    private Map<String, String> parameters = new HashMap<String, String>();
+    private Map<String, String> jndiParameters = new HashMap<>();
+    private Map<String, String> parameters = new HashMap<>();
 
     private String endpointUri;
     private ConnectionFactory connectionFactory;
@@ -124,7 +124,7 @@ public class JMSEndpoint {
             configureProperties(query);
 
             // Use the properties like e.g. from JAXWS properties with "jms." prefix
-            Map<String, Object> jmsProps = new HashMap<String, Object>();
+            Map<String, Object> jmsProps = new HashMap<>();
             if (ei != null) {
                 getJaxWsJmsProps(ei.getProperties(), jmsProps);
             }
@@ -227,11 +227,11 @@ public class JMSEndpoint {
      * @param key
      * @param value
      */
-    public void putJndiParameter(String key, String value) {
+    public final void putJndiParameter(String key, String value) {
         jndiParameters.put(key, value);
     }
 
-    public void putParameter(String key, String value) {
+    public final void putParameter(String key, String value) {
         parameters.put(key, value);
     }
 
@@ -270,7 +270,7 @@ public class JMSEndpoint {
     public String getJmsVariant() {
         return jmsVariant;
     }
-    public void setJmsVariant(String jmsVariant) {
+    public final void setJmsVariant(String jmsVariant) {
         if (jmsVariant == null) {
             this.jmsVariant = QUEUE;
         }

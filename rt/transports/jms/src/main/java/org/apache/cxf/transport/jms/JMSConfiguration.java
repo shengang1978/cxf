@@ -78,6 +78,7 @@ public class JMSConfiguration {
      */
     private String replyToDestination;
     private volatile Destination replyToDestinationDest;
+    
     private String messageType = JMSConstants.TEXT_MESSAGE_TYPE;
     private boolean pubSubDomain;
     private boolean replyPubSubDomain;
@@ -96,8 +97,6 @@ public class JMSConfiguration {
     // For jms spec. Do not configure manually
     private String targetService;
     private String requestURI;
-
-
 
     public void ensureProperlyConfigured() {
         ConnectionFactory cf = getConnectionFactory();
@@ -464,27 +463,38 @@ public class JMSConfiguration {
     }
 
     public Destination getReplyDestination(Session session) throws JMSException {
-        Destination result = replyDestinationDest;
-        if (result == null) {
+        if (this.replyDestinationDest == null) {
             synchronized (this) {
-                result = replyDestinationDest;
-                if (result == null) {
-                    result = replyDestination == null
-                        ? session.createTemporaryQueue()
-                        : destinationResolver.resolveDestinationName(session, replyDestination, replyPubSubDomain);
-                    replyDestinationDest = result;
+                if (this.replyDestinationDest == null) {
+                    this.replyDestinationDest = getReplyDestinationInternal(session);
                 }
             }
         }
-        return result;
+        return this.replyDestinationDest;
     }
+
+    private Destination getReplyDestinationInternal(Session session) throws JMSException {
+        return replyDestination == null
+            ? session.createTemporaryQueue()
+            : destinationResolver.resolveDestinationName(session, replyDestination, replyPubSubDomain);
+    }
+    
+    public void resetCachedReplyDestination() {
+        synchronized (this) {
+            this.replyDestination = null;
+        }
+    }
+
 
     public Destination getTargetDestination(Session session) throws JMSException {
         return destinationResolver.resolveDestinationName(session, targetDestination, pubSubDomain);
     }
 
     public Destination getReplyDestination(Session session, String replyToName) throws JMSException {
-        return destinationResolver.resolveDestinationName(session, replyToName, replyPubSubDomain);
+        if (replyToName != null) {
+            return destinationResolver.resolveDestinationName(session, replyToName, replyPubSubDomain);
+        }
+        return getReplyDestination(session);
     }
 
     public TransactionManager getTransactionManager() {

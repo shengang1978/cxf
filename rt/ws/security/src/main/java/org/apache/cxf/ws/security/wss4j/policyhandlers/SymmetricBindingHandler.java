@@ -19,9 +19,9 @@
 
 package org.apache.cxf.ws.security.wss4j.policyhandlers;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -408,6 +408,8 @@ public class SymmetricBindingHandler extends AbstractBindingBuilder {
             dkEncr.setCallbackLookup(callbackLookup);
             dkEncr.setAttachmentCallbackHandler(new AttachmentCallbackHandler(message));
             dkEncr.setStoreBytesInAttachment(storeBytesInAttachment);
+            dkEncr.setExpandXopInclude(isExpandXopInclude());
+            dkEncr.setWsDocInfo(wsDocInfo);
             if (recToken.getToken().getVersion() == SPConstants.SPVersion.SP11) {
                 dkEncr.setWscVersion(ConversationConstants.VERSION_05_02);
             }
@@ -525,6 +527,8 @@ public class SymmetricBindingHandler extends AbstractBindingBuilder {
                     encr.setCallbackLookup(callbackLookup);
                     encr.setAttachmentCallbackHandler(new AttachmentCallbackHandler(message));
                     encr.setStoreBytesInAttachment(storeBytesInAttachment);
+                    encr.setExpandXopInclude(isExpandXopInclude());
+                    encr.setWsDocInfo(wsDocInfo);
                     String encrTokId = encrTok.getId();
                     if (attached) {
                         encrTokId = encrTok.getWsuId();
@@ -647,6 +651,8 @@ public class SymmetricBindingHandler extends AbstractBindingBuilder {
         dkSign.setCallbackLookup(callbackLookup);
         dkSign.setAttachmentCallbackHandler(new AttachmentCallbackHandler(message));
         dkSign.setStoreBytesInAttachment(storeBytesInAttachment);
+        dkSign.setExpandXopInclude(isExpandXopInclude());
+        dkSign.setWsDocInfo(wsDocInfo);
         if (policyAbstractTokenWrapper.getToken().getVersion() == SPConstants.SPVersion.SP11) {
             dkSign.setWscVersion(ConversationConstants.VERSION_05_02);
         }
@@ -787,6 +793,8 @@ public class SymmetricBindingHandler extends AbstractBindingBuilder {
             sig.setCallbackLookup(callbackLookup);
             sig.setAttachmentCallbackHandler(new AttachmentCallbackHandler(message));
             sig.setStoreBytesInAttachment(storeBytesInAttachment);
+            sig.setExpandXopInclude(isExpandXopInclude());
+            sig.setWsDocInfo(wsDocInfo);
             // If a EncryptedKeyToken is used, set the correct value type to
             // be used in the wsse:Reference in ds:KeyInfo
             int type = included ? WSConstants.CUSTOM_SYMM_SIGNING
@@ -912,9 +920,8 @@ public class SymmetricBindingHandler extends AbstractBindingBuilder {
         String id = encrKey.getId();
         byte[] secret = encrKey.getEphemeralKey();
 
-        Date created = new Date();
-        Date expires = new Date();
-        expires.setTime(created.getTime() + WSS4JUtils.getSecurityTokenLifetime(message));
+        Instant created = Instant.now();
+        Instant expires = created.plusSeconds(WSS4JUtils.getSecurityTokenLifetime(message) / 1000L);
         SecurityToken tempTok = new SecurityToken(
                         id,
                         encrKey.getEncryptedKeyElement(),
@@ -957,9 +964,8 @@ public class SymmetricBindingHandler extends AbstractBindingBuilder {
         String id = usernameToken.getId();
         byte[] secret = usernameToken.getDerivedKey();
 
-        Date created = new Date();
-        Date expires = new Date();
-        expires.setTime(created.getTime() + WSS4JUtils.getSecurityTokenLifetime(message));
+        Instant created = Instant.now();
+        Instant expires = created.plusSeconds(WSS4JUtils.getSecurityTokenLifetime(message) / 1000L);
         SecurityToken tempTok =
             new SecurityToken(id, usernameToken.getUsernameTokenElement(), created, expires);
         tempTok.setSecret(secret);
@@ -973,9 +979,8 @@ public class SymmetricBindingHandler extends AbstractBindingBuilder {
         WSSecurityEngineResult encryptedKeyResult = getEncryptedKeyResult();
         if (encryptedKeyResult != null) {
             // Store it in the cache
-            Date created = new Date();
-            Date expires = new Date();
-            expires.setTime(created.getTime() + WSS4JUtils.getSecurityTokenLifetime(message));
+            Instant created = Instant.now();
+            Instant expires = created.plusSeconds(WSS4JUtils.getSecurityTokenLifetime(message) / 1000L);
 
             String encryptedKeyID = (String)encryptedKeyResult.get(WSSecurityEngineResult.TAG_ID);
             SecurityToken securityToken = new SecurityToken(encryptedKeyID, created, expires);
@@ -1004,9 +1009,8 @@ public class SymmetricBindingHandler extends AbstractBindingBuilder {
                     if (utID == null || utID.length() == 0) {
                         utID = wssConfig.getIdAllocator().createId("UsernameToken-", null);
                     }
-                    Date created = new Date();
-                    Date expires = new Date();
-                    expires.setTime(created.getTime() + WSS4JUtils.getSecurityTokenLifetime(message));
+                    Instant created = Instant.now();
+                    Instant expires = created.plusSeconds(WSS4JUtils.getSecurityTokenLifetime(message) / 1000L);
                     SecurityToken securityToken = new SecurityToken(utID, created, expires);
 
                     byte[] secret = (byte[])wser.get(WSSecurityEngineResult.TAG_SECRET);

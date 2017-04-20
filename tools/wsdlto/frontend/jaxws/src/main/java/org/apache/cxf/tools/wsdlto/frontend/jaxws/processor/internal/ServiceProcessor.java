@@ -376,7 +376,7 @@ public class ServiceProcessor extends AbstractProcessor {
 
                     if (SOAPBindingUtil.getSoapStyle(soapStyle) == null && this.bindingObj == null) {
                         org.apache.cxf.common.i18n.Message msg =
-                            new  org.apache.cxf.common.i18n.Message("BINDING_STYLE_NOT_DEFINED",
+                            new org.apache.cxf.common.i18n.Message("BINDING_STYLE_NOT_DEFINED",
                                                                          LOG);
                         throw new ToolException(msg);
                     }
@@ -636,7 +636,7 @@ public class ServiceProcessor extends AbstractProcessor {
     }
 
     private Map<String, Object> getSoapOperationProp(BindingOperationInfo bop) {
-        Map<String, Object> soapOPProp = new HashMap<String, Object>();
+        Map<String, Object> soapOPProp = new HashMap<>();
         if (bop.getExtensor(ExtensibilityElement.class) != null) {
             for (ExtensibilityElement ext : bop.getExtensors(ExtensibilityElement.class)) {
                 if (SOAPBindingUtil.isSOAPOperation(ext)) {

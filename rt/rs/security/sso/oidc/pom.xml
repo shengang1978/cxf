@@ -145,7 +145,7 @@
       <plugin>
         <groupId>org.bsc.maven</groupId>
         <artifactId>maven-processor-plugin</artifactId>
-        <version>3.1.0</version>
+        <version>3.2.0</version>
         <executions>
           <execution>
             <id>process</id>
@@ -173,7 +173,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.10</version>
         <executions>
           <execution>
             <id>add-source</id>
@@ -230,7 +229,7 @@
         <profile>
             <id>java9</id>
             <properties>
-                <compilerArguments>--patch-module java.annotations.common=${project.basedir}/target//java9/javax.annotation-api-1.2.jar --add-modules java.se.ee,java.activation,java.xml.ws,java.xml.bind -Aopenjpa.source=7 -Aopenjpa.metamodel=true</compilerArguments>
+                <compilerArguments>--patch-module java.xml.ws.annotation=${project.basedir}/target//java9/javax.annotation-api-${cxf.javax.annotation-api.version}.jar --add-modules java.se.ee,java.activation,java.xml.ws,java.xml.bind -Aopenjpa.source=7 -Aopenjpa.metamodel=true</compilerArguments>
             </properties>
             <activation>
                 <jdk>9</jdk>

@@ -19,9 +19,9 @@
 
 package org.apache.cxf.ws.security.wss4j.policyhandlers;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -31,12 +31,14 @@ import javax.xml.soap.SOAPMessage;
 
 import org.w3c.dom.Element;
 import org.apache.cxf.binding.soap.SoapMessage;
+import org.apache.cxf.helpers.DOMUtils;
 import org.apache.cxf.interceptor.Fault;
 import org.apache.cxf.rt.security.utils.SecurityUtils;
 import org.apache.cxf.ws.policy.AssertionInfo;
 import org.apache.cxf.ws.policy.AssertionInfoMap;
 import org.apache.cxf.ws.security.SecurityConstants;
 import org.apache.cxf.ws.security.tokenstore.SecurityToken;
+import org.apache.cxf.ws.security.wss4j.AttachmentCallbackHandler;
 import org.apache.cxf.ws.security.wss4j.WSS4JUtils;
 import org.apache.wss4j.common.WSEncryptionPart;
 import org.apache.wss4j.common.bsp.BSPEnforcer;
@@ -118,7 +120,9 @@ public class TransportBindingHandler extends AbstractBindingBuilder {
             } else if (token instanceof SamlToken) {
                 SamlAssertionWrapper assertionWrapper = addSamlToken((SamlToken)token);
                 if (assertionWrapper != null) {
-                    addSupportingElement(assertionWrapper.toDOM(saaj.getSOAPPart()));
+                    Element envelope = saaj.getSOAPPart().getEnvelope();
+                    envelope = (Element)DOMUtils.getDomElement(envelope);
+                    addSupportingElement(assertionWrapper.toDOM(envelope.getOwnerDocument()));
                 }
             } else {
                 //REVISIT - not supported for signed.  Exception?
@@ -318,7 +322,9 @@ public class TransportBindingHandler extends AbstractBindingBuilder {
             addSig(doX509TokenSignature(token, wrapper));
         } else if (token instanceof SamlToken) {
             SamlAssertionWrapper assertionWrapper = addSamlToken((SamlToken)token);
-            assertionWrapper.toDOM(saaj.getSOAPPart());
+            Element envelope = saaj.getSOAPPart().getEnvelope();
+            envelope = (Element)DOMUtils.getDomElement(envelope);
+            assertionWrapper.toDOM(envelope.getOwnerDocument());
             storeAssertionAsSecurityToken(assertionWrapper);
             addSig(doIssuedTokenSignature(token, wrapper));
         } else if (token instanceof UsernameToken) {
@@ -327,11 +333,12 @@ public class TransportBindingHandler extends AbstractBindingBuilder {
             String id = usernameToken.getId();
             byte[] secret = usernameToken.getDerivedKey();
 
-            Date created = new Date();
-            Date expires = new Date();
-            expires.setTime(created.getTime() + WSS4JUtils.getSecurityTokenLifetime(message));
-            SecurityToken tempTok =
-                new SecurityToken(id, usernameToken.getUsernameTokenElement(), created, expires);
+            Instant created = Instant.now();
+            Instant expires = created.plusSeconds(WSS4JUtils.getSecurityTokenLifetime(message) / 1000L);
+            SecurityToken tempTok = new SecurityToken(id,
+                                                      usernameToken.getUsernameTokenElement(),
+                                                      created,
+                                                      expires);
             tempTok.setSecret(secret);
             getTokenStore().add(tempTok);
             message.put(SecurityConstants.TOKEN_ID, tempTok.getId());
@@ -366,6 +373,11 @@ public class TransportBindingHandler extends AbstractBindingBuilder {
 
             dkSig.setSigCanonicalization(binding.getAlgorithmSuite().getC14n().getValue());
             dkSig.setSignatureAlgorithm(binding.getAlgorithmSuite().getSymmetricSignature());
+            dkSig.setAttachmentCallbackHandler(new AttachmentCallbackHandler(message));
+            dkSig.setStoreBytesInAttachment(storeBytesInAttachment);
+            dkSig.setExpandXopInclude(isExpandXopInclude());
+            dkSig.setWsDocInfo(wsDocInfo);
+            
             AlgorithmSuiteType algType = binding.getAlgorithmSuite().getAlgorithmSuiteType();
             dkSig.setDerivedKeyLength(algType.getSignatureDerivedKeyLength() / 8);
 
@@ -451,6 +463,11 @@ public class TransportBindingHandler extends AbstractBindingBuilder {
         WSSecDKSign dkSign = new WSSecDKSign(secHeader);
         dkSign.setIdAllocator(wssConfig.getIdAllocator());
         dkSign.setCallbackLookup(callbackLookup);
+        dkSign.setAttachmentCallbackHandler(new AttachmentCallbackHandler(message));
+        dkSign.setStoreBytesInAttachment(storeBytesInAttachment);
+        dkSign.setExpandXopInclude(isExpandXopInclude());
+        dkSign.setWsDocInfo(wsDocInfo);
+        
         AlgorithmSuite algorithmSuite = tbinding.getAlgorithmSuite();
 
         //Setting the AttachedReference or the UnattachedReference according to the flag
@@ -501,6 +518,10 @@ public class TransportBindingHandler extends AbstractBindingBuilder {
         WSSecSignature sig = new WSSecSignature(secHeader);
         sig.setIdAllocator(wssConfig.getIdAllocator());
         sig.setCallbackLookup(callbackLookup);
+        sig.setAttachmentCallbackHandler(new AttachmentCallbackHandler(message));
+        sig.setStoreBytesInAttachment(storeBytesInAttachment);
+        sig.setExpandXopInclude(isExpandXopInclude());
+        sig.setWsDocInfo(wsDocInfo);
 
         //Setting the AttachedReference or the UnattachedReference according to the flag
         Element ref;

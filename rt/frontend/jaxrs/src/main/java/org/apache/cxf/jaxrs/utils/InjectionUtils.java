@@ -75,6 +75,7 @@ import org.apache.cxf.common.util.ProxyClassLoader;
 import org.apache.cxf.common.util.ReflectionUtil;
 import org.apache.cxf.common.util.StringUtils;
 import org.apache.cxf.helpers.CastUtils;
+import org.apache.cxf.jaxrs.ext.ContextProvider;
 import org.apache.cxf.jaxrs.ext.MessageContext;
 import org.apache.cxf.jaxrs.ext.ProtocolHeaders;
 import org.apache.cxf.jaxrs.impl.MetadataMap;
@@ -92,12 +93,38 @@ import org.apache.cxf.jaxrs.impl.tl.ThreadLocalUriInfo;
 import org.apache.cxf.jaxrs.model.AbstractResourceInfo;
 import org.apache.cxf.jaxrs.model.Parameter;
 import org.apache.cxf.jaxrs.model.ParameterType;
+import org.apache.cxf.jaxrs.provider.ProviderFactory;
 import org.apache.cxf.jaxrs.provider.ServerProviderFactory;
 import org.apache.cxf.message.Exchange;
 import org.apache.cxf.message.Message;
 import org.apache.cxf.message.MessageUtils;
 
 public final class InjectionUtils {
+    public static final Set<String> STANDARD_CONTEXT_CLASSES = new HashSet<>();
+    public static final Set<String> VALUE_CONTEXTS = new HashSet<>();
+    static {
+        // JAX-RS 1.0-1.1
+        STANDARD_CONTEXT_CLASSES.add(Application.class.getName());
+        STANDARD_CONTEXT_CLASSES.add(UriInfo.class.getName());
+        STANDARD_CONTEXT_CLASSES.add(HttpHeaders.class.getName());
+        STANDARD_CONTEXT_CLASSES.add(Request.class.getName());
+        STANDARD_CONTEXT_CLASSES.add(SecurityContext.class.getName());
+        STANDARD_CONTEXT_CLASSES.add(Providers.class.getName());
+        STANDARD_CONTEXT_CLASSES.add(ContextResolver.class.getName());
+        STANDARD_CONTEXT_CLASSES.add("javax.servlet.http.HttpServletRequest");
+        STANDARD_CONTEXT_CLASSES.add("javax.servlet.http.HttpServletResponse");
+        STANDARD_CONTEXT_CLASSES.add("javax.servlet.ServletContext");
+        // JAX-RS 2.0
+        STANDARD_CONTEXT_CLASSES.add("javax.ws.rs.container.ResourceContext");
+        STANDARD_CONTEXT_CLASSES.add("javax.ws.rs.container.ResourceInfo");
+        STANDARD_CONTEXT_CLASSES.add("javax.ws.rs.core.Configuration");
+        // JAX-RS 2.1
+        STANDARD_CONTEXT_CLASSES.add("javax.ws.rs.sse.Sse");
+        STANDARD_CONTEXT_CLASSES.add("javax.ws.rs.sse.SseEventSink");
+        
+        VALUE_CONTEXTS.add(Application.class.getName());
+        VALUE_CONTEXTS.add("javax.ws.rs.sse.Sse");
+    }
 
     private static final Logger LOG = LogUtils.getL7dLogger(InjectionUtils.class);
     private static final ResourceBundle BUNDLE = BundleUtils.getBundle(InjectionUtils.class);
@@ -406,6 +433,11 @@ public final class InjectionUtils {
             }
             return theResult;
         }
+
+        if (Number.class.isAssignableFrom(pClass) && "".equals(value)) {
+            //pass empty string to boxed number type will result in 404
+            return null;
+        }
         if (pClass.isPrimitive()) {
             try {
                 T ret = (T)PrimitiveUtils.read(value, pClass);
@@ -438,7 +470,7 @@ public final class InjectionUtils {
             throw ex;
         } catch (Exception ex) {
             Throwable t = getOrThrowActualException(ex);
-            LOG.severe(new org.apache.cxf.common.i18n.Message("CLASS_CONSTRUCTOR_FAILURE",
+            LOG.warning(new org.apache.cxf.common.i18n.Message("CLASS_CONSTRUCTOR_FAILURE",
                                                                BUNDLE,
                                                                pClass.getName()).toString());
             Response r = JAXRSUtils.toResponse(HttpUtils.getParameterFailureStatus(pType));
@@ -535,7 +567,7 @@ public final class InjectionUtils {
         }
         if (factoryMethodEx != null) {
             Throwable t = getOrThrowActualException(factoryMethodEx);
-            LOG.severe(new org.apache.cxf.common.i18n.Message("CLASS_VALUE_OF_FAILURE",
+            LOG.warning(new org.apache.cxf.common.i18n.Message("CLASS_VALUE_OF_FAILURE",
                                                                BUNDLE,
                                                                cls.getName()).toString());
             throw new WebApplicationException(t, HttpUtils.getParameterFailureStatus(pType));
@@ -736,7 +768,7 @@ public final class InjectionUtils {
             }
             return theValues;
         } else {
-            Map<Object, Object> theValues = new HashMap<Object, Object>();
+            Map<Object, Object> theValues = new HashMap<>();
             Class<?> valueType =
                 (Class<?>) InjectionUtils.getType(paramType.getActualTypeArguments(), 1);
             for (Map.Entry<String, List<String>> processedValuesEntry : processedValues.entrySet()) {
@@ -1081,15 +1113,26 @@ public final class InjectionUtils {
 
     public static void injectContextProxiesAndApplication(AbstractResourceInfo cri,
                                                           Object instance,
-                                                          Application app) {
+                                                          Application app,
+                                                          ProviderFactory factory) {
         if (!cri.contextsAvailable() || !cri.isSingleton()) {
             return;
         }
         synchronized (instance) {
             for (Map.Entry<Class<?>, Method> entry : cri.getContextMethods().entrySet()) {
                 Method method = entry.getValue();
-                Object value = method.getParameterTypes()[0] == Application.class
-                    ? app : cri.getContextSetterProxy(method);
+                Object value = null;
+                Class<?> cls = method.getParameterTypes()[0];
+                if (cls == Application.class) {
+                    value = app;
+                } else if (VALUE_CONTEXTS.contains(cls.getName()) && factory != null) {
+                    ContextProvider<?> p = factory.createContextProvider(cls, null);
+                    if (p != null) {
+                        value = p.createContext(null);
+                    }
+                } else {
+                    value = cri.getContextSetterProxy(method);
+                }
                 try {
                     if (value == InjectionUtils.extractFromMethod(instance,
                                                                   getGetterFromSetter(method),
@@ -1104,7 +1147,18 @@ public final class InjectionUtils {
             }
 
             for (Field f : cri.getContextFields()) {
-                Object value = f.getType() == Application.class ? app : cri.getContextFieldProxy(f);
+                Object value = null;
+                Class<?> cls = f.getType();
+                if (cls == Application.class) {
+                    value = app;
+                } else if (VALUE_CONTEXTS.contains(cls.getName()) && factory != null) {
+                    ContextProvider<?> p = factory.createContextProvider(cls, null);
+                    if (p != null) {
+                        value = p.createContext(null);
+                    }
+                } else {
+                    value = cri.getContextFieldProxy(f);
+                }
                 try {
                     if (value == InjectionUtils.extractFieldValue(f, instance)) {
                         continue;
@@ -1118,7 +1172,7 @@ public final class InjectionUtils {
     }
 
     public static void injectContextProxies(AbstractResourceInfo cri, Object instance) {
-        injectContextProxiesAndApplication(cri, instance, null);
+        injectContextProxiesAndApplication(cri, instance, null, null);
     }
 
     @SuppressWarnings("unchecked")
@@ -1151,7 +1205,7 @@ public final class InjectionUtils {
 
         for (Map.Entry<Class<?>, Method> entry : cri.getContextMethods().entrySet()) {
             Method method = entry.getValue();
-            if (method.getParameterTypes()[0] == Application.class && cri.isSingleton()) {
+            if (VALUE_CONTEXTS.contains(method.getParameterTypes()[0].getName()) && cri.isSingleton()) {
                 continue;
             }
             Object o = JAXRSUtils.createContextValue(message,
@@ -1178,7 +1232,7 @@ public final class InjectionUtils {
                                            Message m) {
 
         for (Field f : cri.getContextFields()) {
-            if (f.getType() == Application.class && cri.isSingleton()) {
+            if (VALUE_CONTEXTS.contains(f.getType().getName()) && cri.isSingleton()) {
                 continue;
             }
             Object value = JAXRSUtils.createContextValue(m, f.getGenericType(), f.getType());
@@ -1445,15 +1499,21 @@ public final class InjectionUtils {
 
         if (type instanceof TypeVariable) {
             type = InjectionUtils.getSuperType(serviceCls, (TypeVariable<?>)type);
-        } else if (type instanceof ParameterizedType
-            && ((ParameterizedType)type).getActualTypeArguments()[0] instanceof TypeVariable
-            && isSupportedCollectionOrArray(getRawType(type))) {
-            TypeVariable<?> typeVar = (TypeVariable<?>)((ParameterizedType)type).getActualTypeArguments()[0];
-            Type theType = InjectionUtils.getSuperType(serviceCls, typeVar);
-            Class<?> cls = theType instanceof Class
-                ? (Class<?>)theType : InjectionUtils.getActualType(theType, 0);
-            type = new ParameterizedCollectionType(cls);
+        } else if (type instanceof ParameterizedType) {
+            ParameterizedType pt = (ParameterizedType)type;
+            if (pt.getActualTypeArguments()[0] instanceof TypeVariable
+                && isSupportedCollectionOrArray(getRawType(pt))) {
+                TypeVariable<?> typeVar = (TypeVariable<?>)pt.getActualTypeArguments()[0];
+                Type theType = InjectionUtils.getSuperType(serviceCls, typeVar);
+                if (theType instanceof Class) {
+                    type = new ParameterizedCollectionType((Class<?>)theType);
+                } else {
+                    type = processGenericTypeIfNeeded(serviceCls, paramCls, theType);
+                    type = new ParameterizedCollectionType(type);
+                }
+            }
         }
+            
         if (type == null || type == Object.class) {
             type = paramCls;
         }

@@ -111,8 +111,8 @@ public class DispatchClientServerTest extends AbstractBusClientServerTestBase {
                 + TestUtil.getPortNumber(DispatchClientServerTest.class)
                 + "/SOAPDispatchService/SoapDispatchPort";
             ep = Endpoint.create(SOAPBinding.SOAP11HTTP_BINDING, implementor);
-            Map<String, Object> properties = new HashMap<String, Object>();
-            Map<String, String> nsMap = new HashMap<String, String>();
+            Map<String, Object> properties = new HashMap<>();
+            Map<String, String> nsMap = new HashMap<>();
             nsMap.put("gmns", "http://apache.org/hello_world_soap_http/types");
             properties.put("soap.env.ns.map", nsMap);
             properties.put("disable.outputstream.optimization", "true");
@@ -579,7 +579,7 @@ public class DispatchClientServerTest extends AbstractBusClientServerTestBase {
         assertTrue("Expected string, " + expected, expected.equals(responseValue3));
 
         org.apache.hello_world_soap_http.types.TestDocLitFault fr =
-            new  org.apache.hello_world_soap_http.types.TestDocLitFault();
+            new org.apache.hello_world_soap_http.types.TestDocLitFault();
         fr.setFaultType(BadRecordLitFault.class.getSimpleName());
 
         tjbh = new TestJAXBHandler();

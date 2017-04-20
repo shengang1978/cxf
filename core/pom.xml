@@ -229,7 +229,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>buildnumber-maven-plugin</artifactId>
-                <version>1.3</version>
+                <version>1.4</version>
                 <executions>
                     <execution>
                         <id>create-noncanonicalrev</id>
@@ -272,7 +272,7 @@
                                 <extension>org.apache.cxf.xjcplugins:cxf-xjc-javadoc:${cxf.xjc-utils.version}</extension>
                                 <extension>org.apache.cxf.xjcplugins:cxf-xjc-dv:${cxf.xjc-utils.version}</extension>
                             </extensions>
-                            <sourceRoot>${basedir}/target/generated/src/main/java</sourceRoot>
+                            <sourceRoot>${basedir}/target/generated-sources/cxf-xjc-plugin</sourceRoot>
                             <xsdOptions>
                                 <xsdOption>
                                     <xsd>${basedir}/src/main/resources/schemas/wsdl/http.xsd</xsd>

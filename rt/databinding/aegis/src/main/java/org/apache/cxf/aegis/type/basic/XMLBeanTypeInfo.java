@@ -42,7 +42,7 @@ public class XMLBeanTypeInfo extends BeanTypeInfo {
     /**
      * Map used for storing meta data about each property
      */
-    private Map<QName, BeanTypePropertyInfo> name2PropertyInfo = new HashMap<QName, BeanTypePropertyInfo>();
+    private Map<QName, BeanTypePropertyInfo> name2PropertyInfo = new HashMap<>();
 
     public XMLBeanTypeInfo(Class<?> typeClass, List<Element> mappings, String defaultNS) {
         super(typeClass, defaultNS);
@@ -68,7 +68,7 @@ public class XMLBeanTypeInfo extends BeanTypeInfo {
 
         if (e != null) {
             String ignore = DOMUtils.getAttributeValueEmptyNull(e, "ignore");
-            if (ignore != null && ignore.equals("true")) {
+            if ("true".equals(ignore)) {
                 return;
             }
 
